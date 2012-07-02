@@ -32,6 +32,7 @@
 
 #include <linux/regulator/machine.h>
 #include <linux/i2c/twl.h>
+#include <linux/noa3301.h>
 
 #include <mach/hardware.h>
 #include <asm/mach-types.h>
@@ -375,6 +376,23 @@ static struct i2c_board_info __initdata beagle_i2c_eeprom[] = {
        },
 };
 
+struct noa3301_platform_data noa3301_pdata = {
+      .hw_config      = noa3301_hw_config,
+      .gpio_setup     = noa3301_gpio_setup,
+      .is_irq_wakeup  = 1,
+      .phys_dev_path = " ",
+};
+
+static struct i2c_board_info __initdata beagle_i2c_noa3301[] = {
+      {
+#if 0
+             I2C_BOARD_INFO(NOA3301_NAME, 0xA8 >> 1),
+#endif
+             I2C_BOARD_INFO(NOA3301_NAME, 0x37),
+             .platform_data = &noa3301_pdata,
+       },
+};
+
 static int __init omap3_beagle_i2c_init(void)
 {
 	omap3_pmic_get_config(&beagle_twldata,
@@ -385,7 +403,7 @@ static int __init omap3_beagle_i2c_init(void)
 	beagle_twldata.vpll2->constraints.name = "VDVI";
 
 	omap3_pmic_init("twl4030", &beagle_twldata);
-        omap_register_i2c_bus(2, 400, NULL, 0);
+        omap_register_i2c_bus(2, 400, beagle_i2c_noa3301, ARRAY_SIZE(beagle_i2c_noa3301));
 	/* Bus 3 is attached to the DVI port where devices like the pico DLP
 	 * projector don't work reliably with 400kHz */
 	omap_register_i2c_bus(3, 100, beagle_i2c_eeprom, ARRAY_SIZE(beagle_i2c_eeprom));
