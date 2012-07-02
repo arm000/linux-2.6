@@ -198,6 +198,25 @@ static ssize_t noa3301_als_interval_store(struct device *dev,
 	return count;
 }
 
+static ssize_t noa3301_als_read(struct device *dev,
+				struct device_attribute *attr,
+				char *buf)
+{
+	struct noa3301_chip *chip = dev_get_drvdata(dev);
+	unsigned long value;
+	int ret;
+
+	ret = i2c_smbus_read_byte_data(chip->client, NOA3301_ALS_DATA_MSB);
+	if (ret < 0)
+		return -EIO;
+	value = ret << 8;
+	ret = i2c_smbus_read_byte_data(chip->client, NOA3301_ALS_DATA_LSB);
+	if (ret < 0)
+		return -EIO;
+	value |= ret;
+	return sprintf(buf, "%ld\n", value);
+}
+
 static struct device_attribute attributes[] = {
 	__ATTR(als_threshold_up, S_IWUSR | S_IRUGO,
 	       noa3301_als_thres_up_read, noa3301_als_thres_up_store),
@@ -205,8 +224,8 @@ static struct device_attribute attributes[] = {
 	       noa3301_als_thres_lo_read, noa3301_als_thres_lo_store),
 	__ATTR(als_interval, S_IWUSR | S_IRUGO,
 	       noa3301_als_interval_read, noa3301_als_interval_store),
-#if 0
 	__ATTR(als_read, S_IRUGO, noa3301_als_read, NULL),
+#if 0
 	__ATTR(ps_threshold_up, S_IWUSR, NULL, noa3301_ps_thres_up_store),
 	__ATTR(ps_threshold_lo, S_IWUSR, NULL, noa3301_ps_thres_lo_store),
 	__ATTR(ps_interval, S_IWUSR, NULL, noa3301_set_ps_interval),
@@ -249,15 +268,12 @@ static int noa3301_detect_device(struct noa3301_chip *chip)
 		goto error;
 	}
 	part = (u8) ret;
-	pr_warn("%s: part number is 0x%x", __func__, ret);
 	chip->revision = (part & NOACHIP_REV_MASK);
 	if ((part & NOACHIP_PART_MASK) == NOACHIP_PART) {
-		pr_warn("%s: part recognized as 0x%x", __func__, NOACHIP_PART);
 		snprintf(chip->chipname, sizeof(chip->chipname), "NOA3301");
 		chip->active = 1;
 		return 0;
 	}
-	pr_warn("%s: unknown part", __func__);
 	ret = -ENODEV;
  error:
 	dev_dbg(&client->dev, "NOA3301 not found\n");
@@ -271,8 +287,6 @@ static int __devinit noa3301_probe(struct i2c_client *client,
 	struct noa3301_chip *chip;
 	struct noa3301_platform_data *pdata = client->dev.platform_data;
 	int err;
-
-	dev_warn(&client->dev, "%s", __func__);
 
 	if (!pdata || !pdata->gpio_setup || !pdata->hw_config) {
 		dev_err(&client->dev, "%s: platform data is not complete.\n",
@@ -305,14 +319,13 @@ static int __devinit noa3301_probe(struct i2c_client *client,
 		err = -ENODEV;
 		goto err_not_responding;
 	}
-	pr_warn("%s: part was identified", __func__);
 	i2c_set_clientdata(client, chip);
 
 	err = create_sysfs_interfaces(&client->dev);
 	if (err)
 		goto err_create_interfaces_failed;
 
-	dev_warn(&client->dev, "%s success", __func__);
+	pr_info("found %s, revision %d", chip->chipname, chip->revision);
 	return 0;
 
  err_create_interfaces_failed:
@@ -368,7 +381,6 @@ static struct i2c_driver noa3301_driver = {
 
 static int __init noa3301_init(void)
 {
-	pr_warn("%s", __func__);
 	return i2c_add_driver(&noa3301_driver);
 }
 
