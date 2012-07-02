@@ -187,7 +187,7 @@ static ssize_t noa3301_als_interval_store(struct device *dev,
 	int ret;
 
 	/* interval is 6 bits in units of 50ms */
-	if (strict_strtoul(buf, 0, &value) || value > (0x1f * 50))
+	if (strict_strtoul(buf, 0, &value) || value > (0x3f * 50))
 		return -EINVAL;
 
 	ret = i2c_smbus_write_byte_data(chip->client,
