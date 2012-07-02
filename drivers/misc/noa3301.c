@@ -170,13 +170,49 @@ static ssize_t noa3301_als_thres_lo_store(struct device *dev,
 
 }
 
+static ssize_t noa3301_als_interval_read(struct device *dev,
+                                         struct device_attribute *attr,
+                                         char *buf)
+{
+	struct noa3301_chip *chip = dev_get_drvdata(dev);
+        int ret;
+
+        ret = i2c_smbus_read_byte_data(chip->client, NOA3301_ALS_INTERVAL);
+        if (ret < 0)
+                return -EIO;
+        /* interval is 6 bits in units of 50ms */
+	return sprintf(buf, "%d\n", ret * 50);
+}
+
+static ssize_t noa3301_als_interval_store(struct device *dev,
+                                          struct device_attribute *attr,
+                                          const char *buf, size_t count)
+{
+	struct noa3301_chip *chip = dev_get_drvdata(dev);
+	unsigned long value;
+        int ret;
+
+        /* interval is 6 bits in units of 50ms */
+	if (strict_strtoul(buf, 0, &value) || value > (0x1f * 50))
+		return -EINVAL;
+
+        ret = i2c_smbus_write_byte_data(chip->client,
+                                        NOA3301_ALS_INTERVAL,
+                                        value / 50);
+        if (ret < 0)
+                return -EIO;
+
+	return count;
+}
+
 static struct device_attribute attributes[] = {
 	__ATTR(als_threshold_up, S_IWUSR | S_IRUGO,
                noa3301_als_thres_up_read, noa3301_als_thres_up_store),
 	__ATTR(als_threshold_lo, S_IWUSR | S_IRUGO,
                noa3301_als_thres_lo_read, noa3301_als_thres_lo_store),
+	__ATTR(als_interval, S_IWUSR | S_IRUGO,
+               noa3301_als_interval_read, noa3301_als_interval_store),
 #if 0
-	__ATTR(als_interval, S_IWUSR, NULL, noa3301_set_als_interval),
 	__ATTR(als_read, S_IRUGO, noa3301_als_read, NULL),
 	__ATTR(ps_threshold_up, S_IWUSR, NULL, noa3301_ps_thres_up_store),
 	__ATTR(ps_threshold_lo, S_IWUSR, NULL, noa3301_ps_thres_lo_store),
