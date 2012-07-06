@@ -61,10 +61,12 @@ static const char reg_vleds[] = "Vleds";
 #define NOA3301_ALS_DATA_MSB            0x43
 #define NOA3301_ALS_DATA_LSB            0x44
 
+#if 0
 static int noa3301_reset(struct noa3301_chip *chip, int reset)
 {
 	return i2c_smbus_write_byte_data(chip->client, NOA3301_RESET, reset);
 }
+#endif
 
 static ssize_t noa3301_als_thres_up_read(struct device *dev,
 					 struct device_attribute *attr,
@@ -262,7 +264,7 @@ static int noa3301_detect_device(struct noa3301_chip *chip)
 	s32 ret;
 	u8 part;
 
-	ret = i2c_smbus_read_byte_data(client, NOACHIP_PART_ID);
+	ret = i2c_smbus_read_byte_data(client, NOA3301_PART_ID);
 	if (ret < 0) {
 		pr_warn("%s: failed to read part id", __func__);
 		goto error;
@@ -271,7 +273,6 @@ static int noa3301_detect_device(struct noa3301_chip *chip)
 	chip->revision = (part & NOACHIP_REV_MASK);
 	if ((part & NOACHIP_PART_MASK) == NOACHIP_PART) {
 		snprintf(chip->chipname, sizeof(chip->chipname), "NOA3301");
-		chip->active = 1;
 		return 0;
 	}
 	ret = -ENODEV;
@@ -288,17 +289,12 @@ static int __devinit noa3301_probe(struct i2c_client *client,
 	struct noa3301_platform_data *pdata = client->dev.platform_data;
 	int err;
 
-	if (!pdata || !pdata->gpio_setup || !pdata->hw_config) {
+	if (!pdata) {
 		dev_err(&client->dev, "%s: platform data is not complete.\n",
 			__func__);
 		return -ENODEV;
 	}
 
-	err = pdata->gpio_setup(1);
-	if (err) {
-		dev_err(&client->dev, "%s: gpio_setup failed\n", __func__);
-		goto err_gpio_setup_failed;
-	}
 	chip = kzalloc(sizeof *chip, GFP_KERNEL);
 	if (!chip) {
 		dev_err(&client->dev, "%s: kzalloc failed\n", __func__);
@@ -310,9 +306,7 @@ static int __devinit noa3301_probe(struct i2c_client *client,
 	chip->pdata = client->dev.platform_data;
 	chip->client = client;
 
-	pdata->hw_config(1, 1, 0, 0);
 	err = noa3301_detect_device(chip);
-	pdata->hw_config(1, 1, 0, 0);
 	if (err) {
 		dev_err(&client->dev, "%s: device not responding"
 			" error = %d\n", __func__, err);
@@ -330,12 +324,8 @@ static int __devinit noa3301_probe(struct i2c_client *client,
 
  err_create_interfaces_failed:
  err_not_responding:
-	pdata->gpio_setup(0);
  exit_alloc_data_failed:
 	kfree(chip);
-	return err;
- err_gpio_setup_failed:
-	dev_err(&client->dev, "%s: device create failed.\n", __func__);
 	return err;
 }
 
@@ -344,7 +334,6 @@ static int noa3301_remove(struct i2c_client *client)
 	struct noa3301_chip *chip = i2c_get_clientdata(client);
 
 	remove_sysfs_interfaces(&client->dev);
-	chip->pdata->hw_config(0, 0, 0, 0);
 	kfree(chip);
 	i2c_set_clientdata(client, NULL);
 	return 0;

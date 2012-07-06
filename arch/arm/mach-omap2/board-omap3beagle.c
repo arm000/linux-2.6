@@ -377,9 +377,6 @@ static struct i2c_board_info __initdata beagle_i2c_eeprom[] = {
 };
 
 struct noa3301_platform_data noa3301_pdata = {
-      .hw_config      = noa3301_hw_config,
-      .gpio_setup     = noa3301_gpio_setup,
-      .is_irq_wakeup  = 1,
       .phys_dev_path = " ",
 };
 
