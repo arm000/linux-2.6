@@ -337,6 +337,41 @@ static ssize_t noa3301_ps_interval_store(struct device *dev,
 	return count;
 }
 
+static ssize_t noa3301_ps_led_current_read(struct device *dev,
+					   struct device_attribute *attr,
+					   char *buf)
+{
+	struct noa3301_chip *chip = dev_get_drvdata(dev);
+	int ret;
+
+	ret = i2c_smbus_read_byte_data(chip->client, NOA3301_PS_LED_CURRENT);
+	if (ret < 0)
+		return -EIO;
+	/* led current is 5 bits in units of 5mA with a 5mA bias */
+	return sprintf(buf, "%d\n", 5 + ret*5);
+}
+
+static ssize_t noa3301_ps_led_current_store(struct device *dev,
+					  struct device_attribute *attr,
+					  const char *buf, size_t count)
+{
+	struct noa3301_chip *chip = dev_get_drvdata(dev);
+	unsigned long value;
+	int ret;
+
+	/* led current is 5 bits in units of 5mA with a 5mA bias */
+	if (strict_strtoul(buf, 0, &value) || value < 5 ||
+	    value > (5 + 0x1f * 5))
+		return -EINVAL;
+
+	ret = i2c_smbus_write_byte_data(chip->client,
+					NOA3301_PS_LED_CURRENT, value/5 - 1);
+	if (ret < 0)
+		return -EIO;
+
+	return count;
+}
+
 static ssize_t noa3301_ps_read(struct device *dev,
 			       struct device_attribute *attr,
 			       char *buf)
@@ -370,6 +405,8 @@ static struct device_attribute attributes[] = {
 	       noa3301_ps_thres_lo_read, noa3301_ps_thres_lo_store),
 	__ATTR(ps_interval, S_IWUSR | S_IRUGO,
 	       noa3301_ps_interval_read, noa3301_ps_interval_store),
+	__ATTR(ps_led_current, S_IWUSR | S_IRUGO,
+	       noa3301_ps_led_current_read, noa3301_ps_led_current_store),
 	__ATTR(ps_read, S_IRUGO, noa3301_ps_read, NULL),
 };
 
