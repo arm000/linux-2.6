@@ -44,6 +44,10 @@ static const char reg_vleds[] = "Vleds";
 #define NOA3301_PS_TH_LO_MSB            0x12
 #define NOA3301_PS_TH_LO_LSB            0x13
 #define NOA3301_PS_FILTER_CONFIG        0x14
+#define PS_FILTER_N_MASK		0xf
+#define PS_FILTER_N_SHIFT		4
+#define PS_FILTER_M_MASK		0xf
+#define PS_FILTER_M_SHIFT		0
 #define NOA3301_PS_CONFIG               0x15
 #define PS_HYST_ENABLE			(1 << 5)
 #define PS_HYST_DISABLE			(1 << 4)
@@ -173,7 +177,7 @@ static ssize_t noa3301_als_interval_read(struct device *dev,
 
 	ret = i2c_smbus_read_byte_data(chip->client, NOA3301_ALS_INTERVAL);
 	if (ret < 0)
-		return -EIO;
+		return ret;
 	/* interval is 6 bits in units of 50ms */
 	return sprintf(buf, "%d\n", ret * 50);
 }
@@ -193,7 +197,7 @@ static ssize_t noa3301_als_interval_store(struct device *dev,
 	ret = i2c_smbus_write_byte_data(chip->client,
 					NOA3301_ALS_INTERVAL, value / 50);
 	if (ret < 0)
-		return -EIO;
+		return ret;
 
 	return count;
 }
@@ -312,7 +316,7 @@ static ssize_t noa3301_ps_interval_read(struct device *dev,
 
 	ret = i2c_smbus_read_byte_data(chip->client, NOA3301_PS_INTERVAL);
 	if (ret < 0)
-		return -EIO;
+		return ret;
 	/* interval is 8 bits in units of 5ms */
 	return sprintf(buf, "%d\n", ret * 5);
 }
@@ -332,7 +336,7 @@ static ssize_t noa3301_ps_interval_store(struct device *dev,
 	ret = i2c_smbus_write_byte_data(chip->client,
 					NOA3301_PS_INTERVAL, value / 5);
 	if (ret < 0)
-		return -EIO;
+		return ret;
 
 	return count;
 }
@@ -346,7 +350,7 @@ static ssize_t noa3301_ps_led_current_read(struct device *dev,
 
 	ret = i2c_smbus_read_byte_data(chip->client, NOA3301_PS_LED_CURRENT);
 	if (ret < 0)
-		return -EIO;
+		return ret;
 	/* led current is 5 bits in units of 5mA with a 5mA bias */
 	return sprintf(buf, "%d\n", 5 + ret*5);
 }
@@ -367,7 +371,85 @@ static ssize_t noa3301_ps_led_current_store(struct device *dev,
 	ret = i2c_smbus_write_byte_data(chip->client,
 					NOA3301_PS_LED_CURRENT, value/5 - 1);
 	if (ret < 0)
-		return -EIO;
+		return ret;
+
+	return count;
+}
+
+static ssize_t noa3301_ps_filter_m_read(struct device *dev,
+					struct device_attribute *attr,
+					char *buf)
+{
+	struct noa3301_chip *chip = dev_get_drvdata(dev);
+	int ret, m;
+
+	ret = i2c_smbus_read_byte_data(chip->client, NOA3301_PS_FILTER_CONFIG);
+	if (ret < 0)
+		return ret;
+	m = (ret >> PS_FILTER_M_SHIFT) & PS_FILTER_M_MASK;
+
+	return sprintf(buf, "%d\n", m);
+}
+
+static ssize_t noa3301_ps_filter_m_store(struct device *dev,
+					 struct device_attribute *attr,
+					 const char *buf, size_t count)
+{
+	struct noa3301_chip *chip = dev_get_drvdata(dev);
+	unsigned long value;
+	int ret, m;
+
+	if (strict_strtoul(buf, 0, &value) || value < 1 || value > 0xf)
+		return -EINVAL;
+
+	ret = i2c_smbus_read_byte_data(chip->client, NOA3301_PS_FILTER_CONFIG);
+	if (ret < 0)
+		return ret;
+	m = ret & (~PS_FILTER_M_MASK << PS_FILTER_M_SHIFT);
+	m |= (value & PS_FILTER_M_MASK) << PS_FILTER_M_SHIFT;
+	ret = i2c_smbus_write_byte_data(chip->client,
+					NOA3301_PS_FILTER_CONFIG, m);
+	if (ret < 0)
+		return ret;
+
+	return count;
+}
+
+static ssize_t noa3301_ps_filter_n_read(struct device *dev,
+					struct device_attribute *attr,
+					char *buf)
+{
+	struct noa3301_chip *chip = dev_get_drvdata(dev);
+	int ret, n;
+
+	ret = i2c_smbus_read_byte_data(chip->client, NOA3301_PS_FILTER_CONFIG);
+	if (ret < 0)
+		return ret;
+	n = (ret >> PS_FILTER_N_SHIFT) & PS_FILTER_N_MASK;
+
+	return sprintf(buf, "%d\n", n);
+}
+
+static ssize_t noa3301_ps_filter_n_store(struct device *dev,
+					 struct device_attribute *attr,
+					 const char *buf, size_t count)
+{
+	struct noa3301_chip *chip = dev_get_drvdata(dev);
+	unsigned long value;
+	int ret, n;
+
+	if (strict_strtoul(buf, 0, &value) || value < 1 || value > 0xf)
+		return -EINVAL;
+
+	ret = i2c_smbus_read_byte_data(chip->client, NOA3301_PS_FILTER_CONFIG);
+	if (ret < 0)
+		return ret;
+	n = ret &(~PS_FILTER_N_MASK << PS_FILTER_N_SHIFT);
+	n |= (value & PS_FILTER_N_MASK) << PS_FILTER_N_SHIFT;
+	ret = i2c_smbus_write_byte_data(chip->client,
+					NOA3301_PS_FILTER_CONFIG, n);
+	if (ret < 0)
+		return ret;
 
 	return count;
 }
@@ -407,6 +489,10 @@ static struct device_attribute attributes[] = {
 	       noa3301_ps_interval_read, noa3301_ps_interval_store),
 	__ATTR(ps_led_current, S_IWUSR | S_IRUGO,
 	       noa3301_ps_led_current_read, noa3301_ps_led_current_store),
+	__ATTR(ps_filter_numerator, S_IWUSR | S_IRUGO,
+	       noa3301_ps_filter_m_read, noa3301_ps_filter_m_store),
+	__ATTR(ps_filter_denomerator, S_IWUSR | S_IRUGO,
+	       noa3301_ps_filter_n_read, noa3301_ps_filter_n_store),
 	__ATTR(ps_read, S_IRUGO, noa3301_ps_read, NULL),
 };
 
