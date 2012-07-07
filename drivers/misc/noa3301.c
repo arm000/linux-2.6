@@ -45,15 +45,19 @@ static const char reg_vleds[] = "Vleds";
 #define NOA3301_PS_TH_LO_LSB            0x13
 #define NOA3301_PS_FILTER_CONFIG        0x14
 #define NOA3301_PS_CONFIG               0x15
+#define PS_HYST_ENABLE			(1 << 5)
+#define PS_HYST_DISABLE			(1 << 4)
 #define NOA3301_PS_INTERVAL             0x16
 #define NOA3301_PS_CONTROL              0x17
+#define PS_REPEAT			(1 << 1)
+#define PS_ONESHOT			(1 << 0)
 #define NOA3301_ALS_TH_UP_MSB           0x20
 #define NOA3301_ALS_TH_UP_LSB           0x21
 #define NOA3301_ALS_TH_LO_MSB           0x22
 #define NOA3301_ALS_TH_LO_LSB           0x23
 #define NOA3301_ALS_CONFIG              0x25
-#define HYST_ENABLE			(1 << 5)
-#define HYST_TRIGGER			(1 << 4)
+#define ALS_HYST_ENABLE			(1 << 5)
+#define ALS_HYST_TRIGGER		(1 << 4)
 #define NOA3301_ALS_INTERVAL            0x26
 #define NOA3301_ALS_CONTROL             0x27
 #define ALS_REPEAT			(1 << 1)
@@ -216,11 +220,64 @@ static ssize_t noa3301_als_read(struct device *dev,
 
 	ret = i2c_smbus_read_byte_data(chip->client, NOA3301_ALS_DATA_MSB);
 	if (ret < 0)
-		return -EIO;
+		return ret;
 	value = ret << 8;
 	ret = i2c_smbus_read_byte_data(chip->client, NOA3301_ALS_DATA_LSB);
 	if (ret < 0)
+		return ret;
+	value |= ret;
+	return sprintf(buf, "%ld\n", value);
+}
+
+static ssize_t noa3301_ps_interval_read(struct device *dev,
+					struct device_attribute *attr,
+					char *buf)
+{
+	struct noa3301_chip *chip = dev_get_drvdata(dev);
+	int ret;
+
+	ret = i2c_smbus_read_byte_data(chip->client, NOA3301_PS_INTERVAL);
+	if (ret < 0)
 		return -EIO;
+	/* interval is 8 bits in units of 5ms */
+	return sprintf(buf, "%d\n", ret * 5);
+}
+
+static ssize_t noa3301_ps_interval_store(struct device *dev,
+					  struct device_attribute *attr,
+					  const char *buf, size_t count)
+{
+	struct noa3301_chip *chip = dev_get_drvdata(dev);
+	unsigned long value;
+	int ret;
+
+	/* interval is 8 bits in units of 5ms */
+	if (strict_strtoul(buf, 0, &value) || value > (0xff * 5))
+		return -EINVAL;
+
+	ret = i2c_smbus_write_byte_data(chip->client,
+					NOA3301_PS_INTERVAL, value / 5);
+	if (ret < 0)
+		return -EIO;
+
+	return count;
+}
+
+static ssize_t noa3301_ps_read(struct device *dev,
+			       struct device_attribute *attr,
+			       char *buf)
+{
+	struct noa3301_chip *chip = dev_get_drvdata(dev);
+	unsigned long value;
+	int ret;
+
+	ret = i2c_smbus_read_byte_data(chip->client, NOA3301_PS_DATA_MSB);
+	if (ret < 0)
+		return ret;
+	value = ret << 8;
+	ret = i2c_smbus_read_byte_data(chip->client, NOA3301_PS_DATA_LSB);
+	if (ret < 0)
+		return ret;
 	value |= ret;
 	return sprintf(buf, "%ld\n", value);
 }
@@ -236,9 +293,10 @@ static struct device_attribute attributes[] = {
 #if 0
 	__ATTR(ps_threshold_up, S_IWUSR, NULL, noa3301_ps_thres_up_store),
 	__ATTR(ps_threshold_lo, S_IWUSR, NULL, noa3301_ps_thres_lo_store),
-	__ATTR(ps_interval, S_IWUSR, NULL, noa3301_set_ps_interval),
-	__ATTR(ps_read, S_IRUGO, noa3301_ps_read, NULL),
 #endif
+	__ATTR(ps_interval, S_IWUSR | S_IRUGO,
+	       noa3301_ps_interval_read, noa3301_ps_interval_store),
+	__ATTR(ps_read, S_IRUGO, noa3301_ps_read, NULL),
 };
 
 static int create_sysfs_interfaces(struct device *dev)
@@ -300,6 +358,10 @@ static int __devinit noa3301_init_client(struct i2c_client *client)
 		goto out;
 	ret = i2c_smbus_write_byte_data(client, NOA3301_ALS_CONTROL,
 					ALS_REPEAT);
+	if (ret)
+		goto out;
+	ret = i2c_smbus_write_byte_data(client, NOA3301_PS_CONTROL,
+					PS_REPEAT);
 	if (ret)
 		goto out;
 
