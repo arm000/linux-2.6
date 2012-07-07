@@ -217,6 +217,92 @@ static ssize_t noa3301_als_read(struct device *dev,
 	return sprintf(buf, "%ld\n", value);
 }
 
+static ssize_t noa3301_ps_thres_up_read(struct device *dev,
+					struct device_attribute *attr,
+					char *buf)
+{
+	struct noa3301_chip *chip = dev_get_drvdata(dev);
+	unsigned long value;
+	int ret;
+
+	ret = i2c_smbus_read_byte_data(chip->client, NOA3301_PS_TH_UP_MSB);
+	if (ret < 0)
+		return ret;
+	value = ret << 8;
+	ret = i2c_smbus_read_byte_data(chip->client, NOA3301_PS_TH_UP_LSB);
+	if (ret < 0)
+		return ret;
+	value |= ret;
+	return sprintf(buf, "%ld\n", value);
+}
+
+static ssize_t noa3301_ps_thres_up_store(struct device *dev,
+					 struct device_attribute *attr,
+					 const char *buf, size_t count)
+{
+	struct noa3301_chip *chip = dev_get_drvdata(dev);
+	unsigned long value;
+	int ret;
+
+	if (strict_strtoul(buf, 0, &value) || value > 0xffff)
+		return -EINVAL;
+
+	ret = i2c_smbus_write_byte_data(chip->client,
+					NOA3301_PS_TH_UP_MSB,
+					(value >> 8) & 0xff);
+	if (ret < 0)
+		return ret;
+	ret = i2c_smbus_write_byte_data(chip->client,
+					NOA3301_PS_TH_UP_LSB, value & 0xff);
+	if (ret < 0)
+		return ret;
+
+	return count;
+}
+
+static ssize_t noa3301_ps_thres_lo_read(struct device *dev,
+					struct device_attribute *attr,
+					char *buf)
+{
+	struct noa3301_chip *chip = dev_get_drvdata(dev);
+	unsigned long value;
+	int ret;
+
+	ret = i2c_smbus_read_byte_data(chip->client, NOA3301_PS_TH_LO_MSB);
+	if (ret < 0)
+		return ret;
+	value = ret << 8;
+	ret = i2c_smbus_read_byte_data(chip->client, NOA3301_PS_TH_LO_LSB);
+	if (ret < 0)
+		return ret;
+	value |= ret;
+	return sprintf(buf, "%ld\n", value);
+}
+
+static ssize_t noa3301_ps_thres_lo_store(struct device *dev,
+					 struct device_attribute *attr,
+					 const char *buf, size_t count)
+{
+	struct noa3301_chip *chip = dev_get_drvdata(dev);
+	unsigned long value;
+	int ret;
+
+	if (strict_strtoul(buf, 0, &value))
+		return -EINVAL;
+
+	ret = i2c_smbus_write_byte_data(chip->client,
+					NOA3301_PS_TH_LO_MSB,
+					(value >> 8) & 0xff);
+	if (ret < 0)
+		return ret;
+	ret = i2c_smbus_write_byte_data(chip->client,
+					NOA3301_PS_TH_LO_LSB, value & 0xff);
+	if (ret < 0)
+		return ret;
+
+	return count;
+}
+
 static ssize_t noa3301_ps_interval_read(struct device *dev,
 					struct device_attribute *attr,
 					char *buf)
@@ -278,10 +364,10 @@ static struct device_attribute attributes[] = {
 	__ATTR(als_interval, S_IWUSR | S_IRUGO,
 	       noa3301_als_interval_read, noa3301_als_interval_store),
 	__ATTR(als_read, S_IRUGO, noa3301_als_read, NULL),
-#if 0
-	__ATTR(ps_threshold_up, S_IWUSR, NULL, noa3301_ps_thres_up_store),
-	__ATTR(ps_threshold_lo, S_IWUSR, NULL, noa3301_ps_thres_lo_store),
-#endif
+	__ATTR(ps_threshold_up, S_IWUSR | S_IRUGO,
+	       noa3301_ps_thres_up_read, noa3301_ps_thres_up_store),
+	__ATTR(ps_threshold_lo, S_IWUSR | S_IRUGO,
+	       noa3301_ps_thres_lo_read, noa3301_ps_thres_lo_store),
 	__ATTR(ps_interval, S_IWUSR | S_IRUGO,
 	       noa3301_ps_interval_read, noa3301_ps_interval_store),
 	__ATTR(ps_read, S_IRUGO, noa3301_ps_read, NULL),
