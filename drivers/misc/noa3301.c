@@ -59,6 +59,11 @@ static const char reg_vleds[] = "Vleds";
 #define ALS_REPEAT			(1 << 1)
 #define ALS_ONESHOT			(1 << 0)
 #define NOA3301_INTERRUPT               0x40
+#define INTR_ASSERTED			(1 << 4)
+#define INTR_ALS_HI			(1 << 3)
+#define INTR_ALS_LO			(1 << 2)
+#define INTR_PS_HI			(1 << 1)
+#define INTR_PS_LO			(1 << 0)
 #define NOA3301_PS_DATA_MSB             0x41
 #define NOA3301_PS_DATA_LSB             0x42
 #define NOA3301_ALS_DATA_MSB            0x43
