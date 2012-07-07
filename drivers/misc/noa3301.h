@@ -49,8 +49,6 @@
 struct noa3301_chip {
 	struct i2c_client *client;
 	struct noa3301_platform_data *pdata;
-	struct mutex mutex;	/* avoid parallel access */
-	u8 int_config;
 
 	char chipname[10];
 	u8 revision;

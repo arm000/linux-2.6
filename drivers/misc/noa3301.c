@@ -24,7 +24,6 @@
 #include <linux/gpio.h>
 #include <linux/i2c.h>
 #include <linux/interrupt.h>
-#include <linux/mutex.h>
 #include <linux/regulator/consumer.h>
 #include <linux/slab.h>
 #include <linux/input.h>
@@ -53,20 +52,22 @@ static const char reg_vleds[] = "Vleds";
 #define NOA3301_ALS_TH_LO_MSB           0x22
 #define NOA3301_ALS_TH_LO_LSB           0x23
 #define NOA3301_ALS_CONFIG              0x25
+#define HYST_ENABLE			(1 << 5)
+#define HYST_TRIGGER			(1 << 4)
 #define NOA3301_ALS_INTERVAL            0x26
 #define NOA3301_ALS_CONTROL             0x27
+#define ALS_REPEAT			(1 << 1)
+#define ALS_ONESHOT			(1 << 0)
 #define NOA3301_INTERRUPT               0x40
 #define NOA3301_PS_DATA_MSB             0x41
 #define NOA3301_PS_DATA_LSB             0x42
 #define NOA3301_ALS_DATA_MSB            0x43
 #define NOA3301_ALS_DATA_LSB            0x44
 
-#if 0
-static int noa3301_reset(struct noa3301_chip *chip, int reset)
+static int noa3301_reset(struct i2c_client *client)
 {
-	return i2c_smbus_write_byte_data(chip->client, NOA3301_RESET, reset);
+	return i2c_smbus_write_byte_data(client, NOA3301_RESET, 1);
 }
-#endif
 
 static ssize_t noa3301_als_thres_up_read(struct device *dev,
 					 struct device_attribute *attr,
@@ -282,6 +283,25 @@ static int noa3301_detect_device(struct noa3301_chip *chip)
 	return ret;
 }
 
+static int __devinit noa3301_init_client(struct i2c_client *client)
+{
+	int ret;
+
+	ret = noa3301_reset(client);
+	if (ret)
+		goto out;
+	ret = i2c_smbus_write_byte_data(client, NOA3301_INT_CONFIG, 2);
+	if (ret)
+		goto out;
+	ret = i2c_smbus_write_byte_data(client, NOA3301_ALS_CONTROL,
+					ALS_REPEAT);
+	if (ret)
+		goto out;
+
+out:
+	return ret;
+}
+
 static int __devinit noa3301_probe(struct i2c_client *client,
 				   const struct i2c_device_id *id)
 {
@@ -299,10 +319,9 @@ static int __devinit noa3301_probe(struct i2c_client *client,
 	if (!chip) {
 		dev_err(&client->dev, "%s: kzalloc failed\n", __func__);
 		err = -ENOMEM;
-		goto exit_alloc_data_failed;
+		goto fail;
 	}
 
-	mutex_init(&chip->mutex);
 	chip->pdata = client->dev.platform_data;
 	chip->client = client;
 
@@ -311,20 +330,26 @@ static int __devinit noa3301_probe(struct i2c_client *client,
 		dev_err(&client->dev, "%s: device not responding"
 			" error = %d\n", __func__, err);
 		err = -ENODEV;
-		goto err_not_responding;
+		goto fail;
+	}
+	err = noa3301_init_client(client);
+	if (err) {
+		dev_err(&client->dev, "%s: error initializing device"
+			" error = %d\n", __func__, err);
+		err = -ENODEV;
+		goto fail;
 	}
 	i2c_set_clientdata(client, chip);
 
 	err = create_sysfs_interfaces(&client->dev);
 	if (err)
-		goto err_create_interfaces_failed;
+		goto fail;
 
-	pr_info("found %s, revision %d", chip->chipname, chip->revision);
+	dev_info(&client->dev, "found %s, revision %d\n",
+		 chip->chipname, chip->revision);
 	return 0;
 
- err_create_interfaces_failed:
- err_not_responding:
- exit_alloc_data_failed:
+fail:
 	kfree(chip);
 	return err;
 }
