@@ -88,11 +88,11 @@ static ssize_t noa3301_als_thres_up_read(struct device *dev,
 
 	ret = i2c_smbus_read_byte_data(chip->client, NOA3301_ALS_TH_UP_MSB);
 	if (ret < 0)
-		return -EIO;
+		return ret;
 	value = ret << 8;
 	ret = i2c_smbus_read_byte_data(chip->client, NOA3301_ALS_TH_UP_LSB);
 	if (ret < 0)
-		return -EIO;
+		return ret;
 	value |= ret;
 	return sprintf(buf, "%ld\n", value);
 }
@@ -107,24 +107,18 @@ static ssize_t noa3301_als_thres_up_store(struct device *dev,
 
 	if (strict_strtoul(buf, 0, &value) || value > 0xffff)
 		return -EINVAL;
-	pr_warn("%s: setting threshold_up to 0x%lx", __func__, value);
 
 	ret = i2c_smbus_write_byte_data(chip->client,
 					NOA3301_ALS_TH_UP_MSB,
 					(value >> 8) & 0xff);
-	if (ret < 0) {
-		pr_warn("%s: error writing NOA3301_ALS_TH_UP_MSB", __func__);
-		return -EIO;
-	}
+	if (ret < 0)
+		return ret;
 	ret = i2c_smbus_write_byte_data(chip->client,
 					NOA3301_ALS_TH_UP_LSB, value & 0xff);
-	if (ret < 0) {
-		pr_warn("%s: error writing NOA3301_ALS_TH_UP_LSB", __func__);
-		return -EIO;
-	}
+	if (ret < 0)
+		return ret;
 
 	return count;
-
 }
 
 static ssize_t noa3301_als_thres_lo_read(struct device *dev,
@@ -137,11 +131,11 @@ static ssize_t noa3301_als_thres_lo_read(struct device *dev,
 
 	ret = i2c_smbus_read_byte_data(chip->client, NOA3301_ALS_TH_LO_MSB);
 	if (ret < 0)
-		return -EIO;
+		return ret;
 	value = ret << 8;
 	ret = i2c_smbus_read_byte_data(chip->client, NOA3301_ALS_TH_LO_LSB);
 	if (ret < 0)
-		return -EIO;
+		return ret;
 	value |= ret;
 	return sprintf(buf, "%ld\n", value);
 }
@@ -156,24 +150,18 @@ static ssize_t noa3301_als_thres_lo_store(struct device *dev,
 
 	if (strict_strtoul(buf, 0, &value))
 		return -EINVAL;
-	pr_warn("%s: setting threshold_lo to 0x%lx", __func__, value);
 
 	ret = i2c_smbus_write_byte_data(chip->client,
 					NOA3301_ALS_TH_LO_MSB,
 					(value >> 8) & 0xff);
-	if (ret < 0) {
-		pr_warn("%s: error writing NOA3301_ALS_TH_LO_MSB", __func__);
-		return -EIO;
-	}
+	if (ret < 0)
+		return ret;
 	ret = i2c_smbus_write_byte_data(chip->client,
 					NOA3301_ALS_TH_LO_LSB, value & 0xff);
-	if (ret < 0) {
-		pr_warn("%s: error writing NOA3301_ALS_TH_LO_LSB", __func__);
-		return -EIO;
-	}
+	if (ret < 0)
+		return ret;
 
 	return count;
-
 }
 
 static ssize_t noa3301_als_interval_read(struct device *dev,
