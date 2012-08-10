@@ -171,7 +171,7 @@ static ssize_t noa3301_als_thres_lo_store(struct device *dev,
 	return count;
 }
 
-static ssize_t noa3301_als_hi_triggered_read(struct device *dev,
+static ssize_t noa3301_als_triggered_hi_read(struct device *dev,
 					     struct device_attribute *attr,
 					     char *buf)
 {
@@ -182,7 +182,7 @@ static ssize_t noa3301_als_hi_triggered_read(struct device *dev,
 	return sprintf(buf, "%ld\n", value);
 }
 
-static ssize_t noa3301_als_hi_triggered_store(struct device *dev,
+static ssize_t noa3301_als_triggered_hi_store(struct device *dev,
 					      struct device_attribute *attr,
 					      const char *buf, size_t count)
 {
@@ -197,7 +197,7 @@ static ssize_t noa3301_als_hi_triggered_store(struct device *dev,
 	return count;
 }
 
-static ssize_t noa3301_als_lo_triggered_read(struct device *dev,
+static ssize_t noa3301_als_triggered_lo_read(struct device *dev,
 					     struct device_attribute *attr,
 					     char *buf)
 {
@@ -208,7 +208,7 @@ static ssize_t noa3301_als_lo_triggered_read(struct device *dev,
 	return sprintf(buf, "%ld\n", value);
 }
 
-static ssize_t noa3301_als_lo_triggered_store(struct device *dev,
+static ssize_t noa3301_als_triggered_lo_store(struct device *dev,
 					      struct device_attribute *attr,
 					      const char *buf, size_t count)
 {
@@ -362,7 +362,7 @@ static ssize_t noa3301_ps_thres_lo_store(struct device *dev,
 	return count;
 }
 
-static ssize_t noa3301_ps_hi_triggered_read(struct device *dev,
+static ssize_t noa3301_ps_triggered_hi_read(struct device *dev,
 					     struct device_attribute *attr,
 					     char *buf)
 {
@@ -373,7 +373,7 @@ static ssize_t noa3301_ps_hi_triggered_read(struct device *dev,
 	return sprintf(buf, "%ld\n", value);
 }
 
-static ssize_t noa3301_ps_hi_triggered_store(struct device *dev,
+static ssize_t noa3301_ps_triggered_hi_store(struct device *dev,
 					      struct device_attribute *attr,
 					      const char *buf, size_t count)
 {
@@ -388,7 +388,7 @@ static ssize_t noa3301_ps_hi_triggered_store(struct device *dev,
 	return count;
 }
 
-static ssize_t noa3301_ps_lo_triggered_read(struct device *dev,
+static ssize_t noa3301_ps_triggered_lo_read(struct device *dev,
 					     struct device_attribute *attr,
 					     char *buf)
 {
@@ -399,7 +399,7 @@ static ssize_t noa3301_ps_lo_triggered_read(struct device *dev,
 	return sprintf(buf, "%ld\n", value);
 }
 
-static ssize_t noa3301_ps_lo_triggered_store(struct device *dev,
+static ssize_t noa3301_ps_triggered_lo_store(struct device *dev,
 					      struct device_attribute *attr,
 					      const char *buf, size_t count)
 {
@@ -585,10 +585,10 @@ static struct device_attribute attributes[] = {
 	       noa3301_als_thres_hi_read, noa3301_als_thres_hi_store),
 	__ATTR(als_threshold_lo, S_IWUSR | S_IRUGO,
 	       noa3301_als_thres_lo_read, noa3301_als_thres_lo_store),
-	__ATTR(als_hi_triggered, S_IWUSR | S_IRUGO,
-	       noa3301_als_hi_triggered_read, noa3301_als_hi_triggered_store),
-	__ATTR(als_lo_triggered, S_IWUSR | S_IRUGO,
-	       noa3301_als_lo_triggered_read, noa3301_als_lo_triggered_store),
+	__ATTR(als_triggered_hi, S_IWUSR | S_IRUGO,
+	       noa3301_als_triggered_hi_read, noa3301_als_triggered_hi_store),
+	__ATTR(als_triggered_lo, S_IWUSR | S_IRUGO,
+	       noa3301_als_triggered_lo_read, noa3301_als_triggered_lo_store),
 	__ATTR(als_interval, S_IWUSR | S_IRUGO,
 	       noa3301_als_interval_read, noa3301_als_interval_store),
 	__ATTR(als_read, S_IRUGO, noa3301_als_read, NULL),
@@ -596,10 +596,10 @@ static struct device_attribute attributes[] = {
 	       noa3301_ps_thres_hi_read, noa3301_ps_thres_hi_store),
 	__ATTR(ps_threshold_lo, S_IWUSR | S_IRUGO,
 	       noa3301_ps_thres_lo_read, noa3301_ps_thres_lo_store),
-	__ATTR(ps_hi_triggered, S_IWUSR | S_IRUGO,
-	       noa3301_ps_hi_triggered_read, noa3301_ps_hi_triggered_store),
-	__ATTR(ps_lo_triggered, S_IWUSR | S_IRUGO,
-	       noa3301_ps_lo_triggered_read, noa3301_ps_lo_triggered_store),
+	__ATTR(ps_triggered_hi, S_IWUSR | S_IRUGO,
+	       noa3301_ps_triggered_hi_read, noa3301_ps_triggered_hi_store),
+	__ATTR(ps_triggered_lo, S_IWUSR | S_IRUGO,
+	       noa3301_ps_triggered_lo_read, noa3301_ps_triggered_lo_store),
 	__ATTR(ps_interval, S_IWUSR | S_IRUGO,
 	       noa3301_ps_interval_read, noa3301_ps_interval_store),
 	__ATTR(ps_led_current, S_IWUSR | S_IRUGO,
