@@ -171,6 +171,58 @@ static ssize_t noa3301_als_thres_lo_store(struct device *dev,
 	return count;
 }
 
+static ssize_t noa3301_als_hi_triggered_read(struct device *dev,
+					     struct device_attribute *attr,
+					     char *buf)
+{
+	struct noa3301_chip *chip = dev_get_drvdata(dev);
+	unsigned long value;
+
+	value = atomic_read(&chip->als_hi);
+	return sprintf(buf, "%ld\n", value);
+}
+
+static ssize_t noa3301_als_hi_triggered_store(struct device *dev,
+					      struct device_attribute *attr,
+					      const char *buf, size_t count)
+{
+	struct noa3301_chip *chip = dev_get_drvdata(dev);
+	unsigned long value;
+
+	if (strict_strtoul(buf, 0, &value) || value > 0xffff)
+		return -EINVAL;
+
+	atomic_set(&chip->als_hi, value);
+
+	return count;
+}
+
+static ssize_t noa3301_als_lo_triggered_read(struct device *dev,
+					     struct device_attribute *attr,
+					     char *buf)
+{
+	struct noa3301_chip *chip = dev_get_drvdata(dev);
+	unsigned long value;
+
+	value = atomic_read(&chip->als_lo);
+	return sprintf(buf, "%ld\n", value);
+}
+
+static ssize_t noa3301_als_lo_triggered_store(struct device *dev,
+					      struct device_attribute *attr,
+					      const char *buf, size_t count)
+{
+	struct noa3301_chip *chip = dev_get_drvdata(dev);
+	unsigned long value;
+
+	if (strict_strtoul(buf, 0, &value) || value > 0xffff)
+		return -EINVAL;
+
+	atomic_set(&chip->als_lo, value);
+
+	return count;
+}
+
 static ssize_t noa3301_als_interval_read(struct device *dev,
 					 struct device_attribute *attr,
 					 char *buf)
@@ -306,6 +358,58 @@ static ssize_t noa3301_ps_thres_lo_store(struct device *dev,
 					NOA3301_PS_TH_LO_LSB, value & 0xff);
 	if (ret < 0)
 		return ret;
+
+	return count;
+}
+
+static ssize_t noa3301_ps_hi_triggered_read(struct device *dev,
+					     struct device_attribute *attr,
+					     char *buf)
+{
+	struct noa3301_chip *chip = dev_get_drvdata(dev);
+	unsigned long value;
+
+	value = atomic_read(&chip->ps_hi);
+	return sprintf(buf, "%ld\n", value);
+}
+
+static ssize_t noa3301_ps_hi_triggered_store(struct device *dev,
+					      struct device_attribute *attr,
+					      const char *buf, size_t count)
+{
+	struct noa3301_chip *chip = dev_get_drvdata(dev);
+	unsigned long value;
+
+	if (strict_strtoul(buf, 0, &value) || value > 0xffff)
+		return -EINVAL;
+
+	atomic_set(&chip->ps_hi, value);
+
+	return count;
+}
+
+static ssize_t noa3301_ps_lo_triggered_read(struct device *dev,
+					     struct device_attribute *attr,
+					     char *buf)
+{
+	struct noa3301_chip *chip = dev_get_drvdata(dev);
+	unsigned long value;
+
+	value = atomic_read(&chip->ps_lo);
+	return sprintf(buf, "%ld\n", value);
+}
+
+static ssize_t noa3301_ps_lo_triggered_store(struct device *dev,
+					      struct device_attribute *attr,
+					      const char *buf, size_t count)
+{
+	struct noa3301_chip *chip = dev_get_drvdata(dev);
+	unsigned long value;
+
+	if (strict_strtoul(buf, 0, &value) || value > 0xffff)
+		return -EINVAL;
+
+	atomic_set(&chip->ps_lo, value);
 
 	return count;
 }
@@ -481,6 +585,10 @@ static struct device_attribute attributes[] = {
 	       noa3301_als_thres_up_read, noa3301_als_thres_up_store),
 	__ATTR(als_threshold_lo, S_IWUSR | S_IRUGO,
 	       noa3301_als_thres_lo_read, noa3301_als_thres_lo_store),
+	__ATTR(als_hi_triggered, S_IWUSR | S_IRUGO,
+	       noa3301_als_hi_triggered_read, noa3301_als_hi_triggered_store),
+	__ATTR(als_lo_triggered, S_IWUSR | S_IRUGO,
+	       noa3301_als_lo_triggered_read, noa3301_als_lo_triggered_store),
 	__ATTR(als_interval, S_IWUSR | S_IRUGO,
 	       noa3301_als_interval_read, noa3301_als_interval_store),
 	__ATTR(als_read, S_IRUGO, noa3301_als_read, NULL),
@@ -488,6 +596,10 @@ static struct device_attribute attributes[] = {
 	       noa3301_ps_thres_up_read, noa3301_ps_thres_up_store),
 	__ATTR(ps_threshold_lo, S_IWUSR | S_IRUGO,
 	       noa3301_ps_thres_lo_read, noa3301_ps_thres_lo_store),
+	__ATTR(ps_hi_triggered, S_IWUSR | S_IRUGO,
+	       noa3301_ps_hi_triggered_read, noa3301_ps_hi_triggered_store),
+	__ATTR(ps_lo_triggered, S_IWUSR | S_IRUGO,
+	       noa3301_ps_lo_triggered_read, noa3301_ps_lo_triggered_store),
 	__ATTR(ps_interval, S_IWUSR | S_IRUGO,
 	       noa3301_ps_interval_read, noa3301_ps_interval_store),
 	__ATTR(ps_led_current, S_IWUSR | S_IRUGO,
@@ -558,15 +670,14 @@ static irqreturn_t noa3301_irq(int irq, void *cookie)
 
 	/* read irq status register */
 	irq_status = i2c_smbus_read_byte_data(chip->client, NOA3301_INTERRUPT);
-	pr_err("%s: 0x%x\n", __func__, irq_status);
 	if (irq_status & IRQ_ALS_HI)
-		pr_err("%s: ALS HI\n", __func__);
+		atomic_inc(&chip->als_hi);
 	if (irq_status & IRQ_ALS_LO)
-		pr_err("%s: ALS LO\n", __func__);
+		atomic_inc(&chip->als_lo);
 	if (irq_status & IRQ_PS_HI)
-		pr_err("%s: PS HI\n", __func__);
+		atomic_inc(&chip->ps_hi);
 	if (irq_status & IRQ_PS_LO)
-		pr_err("%s: PS LO\n", __func__);
+		atomic_inc(&chip->ps_lo);
 
 	return IRQ_HANDLED;
 }
@@ -617,6 +728,10 @@ static int __devinit noa3301_probe(struct i2c_client *client,
 
 	chip->pdata = client->dev.platform_data;
 	chip->client = client;
+	atomic_set(&chip->als_hi, 0);
+	atomic_set(&chip->als_lo, 0);
+	atomic_set(&chip->ps_hi, 0);
+	atomic_set(&chip->ps_lo, 0);
 
 	err = noa3301_detect_device(chip);
 	if (err) {

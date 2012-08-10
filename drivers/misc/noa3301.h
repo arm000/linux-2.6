@@ -53,6 +53,10 @@ struct noa3301_chip {
 	char chipname[10];
 	u8 revision;
 	int irq;
+        atomic_t als_hi;
+        atomic_t als_lo;
+        atomic_t ps_hi;
+        atomic_t ps_lo;
 };
 
 extern struct noa3301_chip *noa3301;
