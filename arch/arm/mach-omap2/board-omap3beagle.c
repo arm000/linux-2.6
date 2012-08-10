@@ -378,6 +378,7 @@ static struct i2c_board_info __initdata beagle_i2c_eeprom[] = {
 
 struct noa3301_platform_data noa3301_pdata = {
       .phys_dev_path = " ",
+      .irq = OMAP_GPIO_IRQ(157),
 };
 
 static struct i2c_board_info __initdata beagle_i2c_noa3301[] = {
@@ -533,6 +534,22 @@ static void __init beagle_opp_init(void)
 	return;
 }
 
+#define OMAP_NOA3301_IRQ_GPIO	(157)
+
+static void __init beagle_noa3301_init(void)
+{
+	int ret;
+
+	omap_mux_init_gpio(OMAP_NOA3301_IRQ_GPIO, OMAP_PIN_INPUT);
+	ret = gpio_request(OMAP_NOA3301_IRQ_GPIO, "noa3301_irq");
+	if (ret < 0) {
+		printk(KERN_ERR "Failed to request GPIO %d for "
+		       "noa3301 IRQ\n", OMAP_NOA3301_IRQ_GPIO);
+		return;
+	}
+	gpio_direction_input(OMAP_NOA3301_IRQ_GPIO);
+}
+
 static void __init omap3_beagle_init(void)
 {
 	omap3_mux_init(board_mux, OMAP_PACKAGE_CBB);
@@ -547,6 +564,8 @@ static void __init omap3_beagle_init(void)
 	omap_serial_init();
 	omap_sdrc_init(mt46h32m32lf6_sdrc_params,
 				  mt46h32m32lf6_sdrc_params);
+
+	beagle_noa3301_init();
 
 	omap_mux_init_gpio(170, OMAP_PIN_INPUT);
 	/* REVISIT leave DVI powered down until it's needed ... */
