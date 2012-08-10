@@ -85,7 +85,7 @@ static int noa3301_reset(struct i2c_client *client)
 	return i2c_smbus_write_byte_data(client, NOA3301_RESET, 1);
 }
 
-static ssize_t noa3301_als_thres_up_read(struct device *dev,
+static ssize_t noa3301_als_thres_hi_read(struct device *dev,
 					 struct device_attribute *attr,
 					 char *buf)
 {
@@ -104,7 +104,7 @@ static ssize_t noa3301_als_thres_up_read(struct device *dev,
 	return sprintf(buf, "%ld\n", value);
 }
 
-static ssize_t noa3301_als_thres_up_store(struct device *dev,
+static ssize_t noa3301_als_thres_hi_store(struct device *dev,
 					  struct device_attribute *attr,
 					  const char *buf, size_t count)
 {
@@ -276,7 +276,7 @@ static ssize_t noa3301_als_read(struct device *dev,
 	return sprintf(buf, "%ld\n", value);
 }
 
-static ssize_t noa3301_ps_thres_up_read(struct device *dev,
+static ssize_t noa3301_ps_thres_hi_read(struct device *dev,
 					struct device_attribute *attr,
 					char *buf)
 {
@@ -295,7 +295,7 @@ static ssize_t noa3301_ps_thres_up_read(struct device *dev,
 	return sprintf(buf, "%ld\n", value);
 }
 
-static ssize_t noa3301_ps_thres_up_store(struct device *dev,
+static ssize_t noa3301_ps_thres_hi_store(struct device *dev,
 					 struct device_attribute *attr,
 					 const char *buf, size_t count)
 {
@@ -581,8 +581,8 @@ static ssize_t noa3301_ps_read(struct device *dev,
 }
 
 static struct device_attribute attributes[] = {
-	__ATTR(als_threshold_up, S_IWUSR | S_IRUGO,
-	       noa3301_als_thres_up_read, noa3301_als_thres_up_store),
+	__ATTR(als_threshold_hi, S_IWUSR | S_IRUGO,
+	       noa3301_als_thres_hi_read, noa3301_als_thres_hi_store),
 	__ATTR(als_threshold_lo, S_IWUSR | S_IRUGO,
 	       noa3301_als_thres_lo_read, noa3301_als_thres_lo_store),
 	__ATTR(als_hi_triggered, S_IWUSR | S_IRUGO,
@@ -592,8 +592,8 @@ static struct device_attribute attributes[] = {
 	__ATTR(als_interval, S_IWUSR | S_IRUGO,
 	       noa3301_als_interval_read, noa3301_als_interval_store),
 	__ATTR(als_read, S_IRUGO, noa3301_als_read, NULL),
-	__ATTR(ps_threshold_up, S_IWUSR | S_IRUGO,
-	       noa3301_ps_thres_up_read, noa3301_ps_thres_up_store),
+	__ATTR(ps_threshold_hi, S_IWUSR | S_IRUGO,
+	       noa3301_ps_thres_hi_read, noa3301_ps_thres_hi_store),
 	__ATTR(ps_threshold_lo, S_IWUSR | S_IRUGO,
 	       noa3301_ps_thres_lo_read, noa3301_ps_thres_lo_store),
 	__ATTR(ps_hi_triggered, S_IWUSR | S_IRUGO,
