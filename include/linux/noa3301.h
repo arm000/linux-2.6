@@ -3,6 +3,7 @@
 
 struct noa3301_platform_data {
 	char *phys_dev_path;
+        int irq;
 };
 
 #define NOA3301_NAME "noa3301"

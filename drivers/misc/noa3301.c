@@ -38,6 +38,9 @@ static const char reg_vleds[] = "Vleds";
 #define NOA3301_PART_ID                 0x00
 #define NOA3301_RESET                   0x01
 #define NOA3301_INT_CONFIG              0x02
+#define IRQ_ACTIVE_LO			(0 << 0)
+#define IRQ_ACTIVE_HI			(1 << 0)
+#define IRQ_AUTO_CLEAR			(1 << 1)
 #define NOA3301_PS_LED_CURRENT          0x0f
 #define NOA3301_PS_TH_UP_MSB            0x10
 #define NOA3301_PS_TH_UP_LSB            0x11
@@ -67,11 +70,11 @@ static const char reg_vleds[] = "Vleds";
 #define ALS_REPEAT			(1 << 1)
 #define ALS_ONESHOT			(1 << 0)
 #define NOA3301_INTERRUPT               0x40
-#define INTR_ASSERTED			(1 << 4)
-#define INTR_ALS_HI			(1 << 3)
-#define INTR_ALS_LO			(1 << 2)
-#define INTR_PS_HI			(1 << 1)
-#define INTR_PS_LO			(1 << 0)
+#define IRQ_ASSERTED			(1 << 4)
+#define IRQ_ALS_HI			(1 << 3)
+#define IRQ_ALS_LO			(1 << 2)
+#define IRQ_PS_HI			(1 << 1)
+#define IRQ_PS_LO			(1 << 0)
 #define NOA3301_PS_DATA_MSB             0x41
 #define NOA3301_PS_DATA_LSB             0x42
 #define NOA3301_ALS_DATA_MSB            0x43
@@ -527,7 +530,7 @@ static int noa3301_detect_device(struct noa3301_chip *chip)
 
 	ret = i2c_smbus_read_byte_data(client, NOA3301_PART_ID);
 	if (ret < 0) {
-		pr_warn("%s: failed to read part id", __func__);
+		pr_warn("%s: failed to read part id\n", __func__);
 		goto error;
 	}
 	part = (u8) ret;
@@ -543,6 +546,31 @@ static int noa3301_detect_device(struct noa3301_chip *chip)
 	return ret;
 }
 
+static irqreturn_t noa3301_hardirq(int irq, void *cookie)
+{
+	return IRQ_WAKE_THREAD;
+}
+
+static irqreturn_t noa3301_irq(int irq, void *cookie)
+{
+	struct noa3301_chip *chip = cookie;
+	int irq_status;
+
+	/* read irq status register */
+	irq_status = i2c_smbus_read_byte_data(chip->client, NOA3301_INTERRUPT);
+	pr_err("%s: 0x%x\n", __func__, irq_status);
+	if (irq_status & IRQ_ALS_HI)
+		pr_err("%s: ALS HI\n", __func__);
+	if (irq_status & IRQ_ALS_LO)
+		pr_err("%s: ALS LO\n", __func__);
+	if (irq_status & IRQ_PS_HI)
+		pr_err("%s: PS HI\n", __func__);
+	if (irq_status & IRQ_PS_LO)
+		pr_err("%s: PS LO\n", __func__);
+
+	return IRQ_HANDLED;
+}
+
 static int __devinit noa3301_init_client(struct i2c_client *client)
 {
 	int ret;
@@ -550,7 +578,8 @@ static int __devinit noa3301_init_client(struct i2c_client *client)
 	ret = noa3301_reset(client);
 	if (ret)
 		goto out;
-	ret = i2c_smbus_write_byte_data(client, NOA3301_INT_CONFIG, 2);
+	ret = i2c_smbus_write_byte_data(client, NOA3301_INT_CONFIG,
+					IRQ_ACTIVE_LO);
 	if (ret)
 		goto out;
 	ret = i2c_smbus_write_byte_data(client, NOA3301_ALS_CONTROL,
@@ -605,14 +634,27 @@ static int __devinit noa3301_probe(struct i2c_client *client,
 	}
 	i2c_set_clientdata(client, chip);
 
+	err = request_threaded_irq(chip->pdata->irq,
+				   noa3301_hardirq, noa3301_irq,
+				   IRQF_TRIGGER_LOW | IRQF_ONESHOT,
+				   "noa3301", chip);
+	if (err < 0) {
+		dev_err(&client->dev, "%s: error requesting irq"
+			" error = %d\n", __func__, err);
+		err = -ENODEV;
+		goto fail;
+	}
+
 	err = create_sysfs_interfaces(&client->dev);
 	if (err)
-		goto fail;
+		goto fail_sysfs;
 
 	dev_info(&client->dev, "found %s, revision %d\n",
 		 chip->chipname, chip->revision);
 	return 0;
 
+fail_sysfs:
+	free_irq(chip->pdata->irq, chip);
 fail:
 	kfree(chip);
 	return err;
@@ -623,6 +665,7 @@ static int noa3301_remove(struct i2c_client *client)
 	struct noa3301_chip *chip = i2c_get_clientdata(client);
 
 	remove_sysfs_interfaces(&client->dev);
+	free_irq(chip->pdata->irq, chip);
 	kfree(chip);
 	i2c_set_clientdata(client, NULL);
 	return 0;
